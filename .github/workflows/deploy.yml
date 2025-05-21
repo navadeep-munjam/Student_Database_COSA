@@ -9,6 +9,7 @@ on:
 jobs:
   test-and-push:
     runs-on: ubuntu-latest
+
     steps:
       - name: 🛒 Checkout repository
         uses: actions/checkout@v3
@@ -57,30 +58,34 @@ jobs:
 
       - name: ✅ Test Backend Container (with secrets as env vars)
         run: |
-          # Create network and start MongoDB
           docker network create test_net || echo "Network test_net already exists"
+
+          # Start MongoDB
           docker run -d --rm --name mongo_test --network test_net mongo:latest
           
-          # Wait for MongoDB to be ready
-          sleep 10
-          docker exec mongo_test mongo --eval "db.adminCommand('ping')" || \
-            (echo "MongoDB not ready!" && exit 1)
-          
+          # Wait and verify MongoDB readiness using mongosh container
+          for i in {1..10}; do
+            docker run --rm --network test_net mongo:latest mongosh "mongodb://mongo_test:27017" --eval "db.adminCommand('ping')" && break
+            echo "Waiting for MongoDB to be ready... ($i)"
+            sleep 3
+          done
+
           # Start backend in detached mode
           docker run -d --rm --name backend_test --network test_net -p 8000:8000 \
             -e PORT=${{ secrets.PORT || '8000' }} \
             -e MONGO_URL=${{ secrets.MONGO_URL || 'mongodb://mongo_test:27017/appdb' }} \
             ${{ secrets.DOCKER_USERNAME }}/backend:latest
-          
+
           # Wait for backend to start
           sleep 5
-          
+
           # Test backend health endpoint
           curl --fail http://localhost:8000/health || \
             (echo "Backend health check failed!" && docker logs backend_test && exit 1)
-          
+
           # Cleanup
-          docker stop backend_test mongo_test
+          docker stop backend_test
+          docker stop mongo_test
           docker network rm test_net
 
       - name: 🚀 Push Backend Docker image
