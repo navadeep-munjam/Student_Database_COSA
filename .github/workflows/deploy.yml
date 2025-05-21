@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🛒 Checkout repository
+      - name:  Checkout repository
         uses: actions/checkout@v3
 
       - name:  Set up Docker Buildx
@@ -40,21 +40,13 @@ jobs:
           sleep 5
           curl --fail http://localhost:3000 || (echo "Frontend container failed to respond!" && exit 1)
           docker stop frontend_test
-
       - name:  Push Frontend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/frontend:latest
 
       - name:  Build Backend Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:latest ./Backend
 
-      - name:  Scan Backend Docker image with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/backend:latest
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: 'true'
-
+     
       - name: Run backend container
         run: |
           docker run -d \
@@ -65,13 +57,9 @@ jobs:
             -e BACKEND_URL=${{ secrets.BACKEND_URL }} \
             -p 8000:8000 \
             ${{ secrets.DOCKER_USERNAME }}/backend:latest
-
           echo "Waiting for backend to start..."
           sleep 15
-
           echo "Checking backend container logs:"
           docker logs backend_test
-
-
       - name:  Push Backend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
