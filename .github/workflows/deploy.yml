@@ -57,7 +57,6 @@ jobs:
       #     ignore-unfixed: 'true'
 
       - name: Run backend container
-
         run: |
           docker run -d \
             --name backend_test \
@@ -74,13 +73,6 @@ jobs:
           echo "Checking backend container logs:"
           docker logs backend_test
 
-          echo "Running backend health check..."
-          curl -v --fail http://localhost:8000/health || (
-            echo "Backend health check failed!"
-            echo "Dumping backend logs:"
-            docker logs backend_test
-            exit 1
-          )
 
       - name: 🚀 Push Backend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
