@@ -56,37 +56,29 @@ jobs:
       #     exit-code: '1'
       #     ignore-unfixed: 'true'
 
-      - name: ✅ Test Backend Container (with secrets as env vars)
+      - name: Run backend container
         run: |
-          docker network create test_net || echo "Network test_net already exists"
-
-          # Start MongoDB
-          docker run -d --rm --name mongo_test --network test_net mongo:latest
-          
-          # Wait and verify MongoDB readiness using mongosh container
-          for i in {1..10}; do
-            docker run --rm --network test_net mongo:latest mongosh "mongodb://mongo_test:27017" --eval "db.adminCommand('ping')" && break
-            echo "Waiting for MongoDB to be ready... ($i)"
-            sleep 3
-          done
-
-          # Start backend in detached mode
-          docker run -d --rm --name backend_test --network test_net -p 8000:8000 \
-            -e PORT=${{ secrets.PORT || '8000' }} \
-            -e MONGO_URL=${{ secrets.MONGO_URL || 'mongodb://mongo_test:27017/appdb' }} \
+          docker run -d \
+            --name backend_test \
+            -e PORT=${{ secrets.PORT }} \
+            -e MONGO_URL=${{ secrets.MONGO_URL }} \
+            -p ${{ secrets.PORT }}:${{ secrets.PORT }} \
             ${{ secrets.DOCKER_USERNAME }}/backend:latest
 
-          # Wait for backend to start
-          sleep 5
+          echo "Waiting for backend to start..."
+          sleep 15
 
-          # Test backend health endpoint
-          curl --fail http://localhost:8000/health || \
-            (echo "Backend health check failed!" && docker logs backend_test && exit 1)
+          echo "Checking backend container logs:"
+          docker logs backend_test
 
-          # Cleanup
-          docker stop backend_test
-          docker stop mongo_test
-          docker network rm test_net
+          echo "Running backend health check..."
+          curl -v --fail http://localhost:${{ secrets.PORT }}/health || (
+            echo "Backend health check failed!"
+            echo "Dumping backend logs:"
+            docker logs backend_test
+            exit 1
+          )
+
 
       - name: 🚀 Push Backend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
