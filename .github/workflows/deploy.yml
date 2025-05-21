@@ -48,13 +48,13 @@ jobs:
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:latest ./Backend
 
       # Uncomment below lines if you want to scan backend too
-      # - name: 🔎 Scan Backend Docker image with Trivy
-      #   uses: aquasecurity/trivy-action@master
-      #   with:
-      #     image-ref: ${{ secrets.DOCKER_USERNAME }}/backend:latest
-      #     format: 'table'
-      #     exit-code: '1'
-      #     ignore-unfixed: 'true'
+      - name: 🔎 Scan Backend Docker image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/backend:latest
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: 'true'
 
       - name: Run backend container
         run: |
