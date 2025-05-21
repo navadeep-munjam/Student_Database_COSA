@@ -14,19 +14,19 @@ jobs:
       - name: 🛒 Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🔧 Set up Docker Buildx
+      - name:  Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: 🔐 Login to Docker Hub
+      - name:  Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: 🛠️ Build Frontend Docker image
+      - name:  Build Frontend Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:latest ./frontend
 
-      - name: 🔎 Scan Frontend Docker image with Trivy
+      - name:  Scan Frontend Docker image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/frontend:latest
@@ -34,21 +34,20 @@ jobs:
           exit-code: '1'
           ignore-unfixed: 'true'
 
-      - name: ✅ Test Frontend Container
+      - name:  Test Frontend Container
         run: |
           docker run --rm -d --name frontend_test -p 3000:80 ${{ secrets.DOCKER_USERNAME }}/frontend:latest
           sleep 5
           curl --fail http://localhost:3000 || (echo "Frontend container failed to respond!" && exit 1)
           docker stop frontend_test
 
-      - name: 🚀 Push Frontend Docker image
+      - name:  Push Frontend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/frontend:latest
 
-      - name: 🛠️ Build Backend Docker image
+      - name:  Build Backend Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:latest ./Backend
 
-      # Uncomment below lines if you want to scan backend too
-      - name: 🔎 Scan Backend Docker image with Trivy
+      - name:  Scan Backend Docker image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/backend:latest
@@ -74,5 +73,5 @@ jobs:
           docker logs backend_test
 
 
-      - name: 🚀 Push Backend Docker image
+      - name:  Push Backend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
