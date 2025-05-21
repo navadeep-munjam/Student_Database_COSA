@@ -57,14 +57,31 @@ jobs:
 
       - name: ✅ Test Backend Container (with secrets as env vars)
         run: |
+          # Create network and start MongoDB
           docker network create test_net || echo "Network test_net already exists"
-          docker run -d --name mongo_test --network test_net mongo:latest
+          docker run -d --rm --name mongo_test --network test_net mongo:latest
+          
+          # Wait for MongoDB to be ready
           sleep 10
-          docker run --rm --name backend_test --network test_net -p 8000:8000 \
-            -e PORT=${{ secrets.PORT }} \
-            -e MONGO_URL=${{ secrets.MONGO_URL }} \
-            ${{ secrets.DOCKER_USERNAME }}/backend:latest || (echo "Backend container failed!" && exit 1)
-          docker stop mongo_test
+          docker exec mongo_test mongo --eval "db.adminCommand('ping')" || \
+            (echo "MongoDB not ready!" && exit 1)
+          
+          # Start backend in detached mode
+          docker run -d --rm --name backend_test --network test_net -p 8000:8000 \
+            -e PORT=${{ secrets.PORT || '8000' }} \
+            -e MONGO_URL=${{ secrets.MONGO_URL || 'mongodb://mongo_test:27017/appdb' }} \
+            ${{ secrets.DOCKER_USERNAME }}/backend:latest
+          
+          # Wait for backend to start
+          sleep 5
+          
+          # Test backend health endpoint
+          curl --fail http://localhost:8000/health || \
+            (echo "Backend health check failed!" && docker logs backend_test && exit 1)
+          
+          # Cleanup
+          docker stop backend_test mongo_test
+          docker network rm test_net
 
       - name: 🚀 Push Backend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
