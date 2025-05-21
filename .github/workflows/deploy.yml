@@ -57,12 +57,15 @@ jobs:
       #     ignore-unfixed: 'true'
 
       - name: Run backend container
+
         run: |
           docker run -d \
             --name backend_test \
-            -e PORT=${{ secrets.PORT }} \
-            -e MONGO_URL=${{ secrets.MONGO_URL }} \
-            -p ${{ secrets.PORT }}:${{ secrets.PORT }} \
+            -e MONGODB_URI=${{ secrets.MONGODB_URI }} \
+            -e JWT_SECRET_TOKEN=${{ secrets.JWT_SECRET_TOKEN }} \
+            -e FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+            -e BACKEND_URL=${{ secrets.BACKEND_URL }} \
+            -p 8000:8000 \
             ${{ secrets.DOCKER_USERNAME }}/backend:latest
 
           echo "Waiting for backend to start..."
@@ -72,13 +75,12 @@ jobs:
           docker logs backend_test
 
           echo "Running backend health check..."
-          curl -v --fail http://localhost:${{ secrets.PORT }}/health || (
+          curl -v --fail http://localhost:8000/health || (
             echo "Backend health check failed!"
             echo "Dumping backend logs:"
             docker logs backend_test
             exit 1
           )
-
 
       - name: 🚀 Push Backend Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
